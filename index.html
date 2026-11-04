@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#191f18">
+  <title>The Great War — Five Banners</title>
+  <meta name="description" content="A WWI real-time strategy game. Five empires, one continental front, and every banner under your command.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23171d15'/%3E%3Cpath d='M16 4l2.7 9.3L28 16l-9.3 2.7L16 28l-2.7-9.3L4 16l9.3-2.7z' fill='%23d8bd79'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div id="app">
+    <canvas id="game-canvas" aria-label="The Great War battlefield"></canvas>
+    <div id="grain"></div>
+    <div id="vignette"></div>
+
+    <div id="hud" class="hidden">
+      <header id="topbar">
+        <div class="brand">
+          <span class="brand-kicker">THE GREAT WAR</span>
+          <span class="brand-title">FIVE BANNERS</span>
+        </div>
+        <div class="theatre">
+          <span class="theatre-date">MARCH 1916</span>
+          <span class="theatre-sep"></span>
+          <span class="theatre-name">THE CONTINENTAL FRONT</span>
+        </div>
+        <div id="objective-strip" class="objective-strip">
+          <span class="objective-label">DOMINATION</span>
+          <div class="objective-track"><i id="objective-fill"></i></div>
+          <span id="objective-count">3 / 15</span>
+        </div>
+        <div class="top-resources">
+          <div class="resource">
+            <span class="resource-value" id="res-requisition">260</span>
+            <span class="resource-label">REQUISITION</span>
+          </div>
+          <div class="resource">
+            <span class="resource-value" id="res-army">6 / 23</span>
+            <span class="resource-label">FIELD ARMY</span>
+          </div>
+          <div class="resource">
+            <span class="resource-value" id="res-sectors">3</span>
+            <span class="resource-label">SECTORS</span>
+          </div>
+          <button id="sound-btn" class="icon-btn" aria-label="Toggle sound" title="Toggle sound">
+            <span id="sound-icon">◈</span>
+          </button>
+          <button id="pause-btn" class="icon-btn" aria-label="Pause game" title="Pause (Space)">Ⅱ</button>
+        </div>
+      </header>
+
+      <aside id="faction-rail" aria-label="Playable empires"></aside>
+
+      <div id="armistice-banner" class="armistice-banner hidden">
+        <span class="armistice-kicker">ARMISTICE</span>
+        <b id="armistice-text">German Empire is breaking the line</b>
+        <span id="armistice-count">42</span>
+      </div>
+
+      <aside id="dossier" class="panel">
+        <div class="panel-head">
+          <span>FIELD DOSSIER</span>
+          <span id="dossier-kind" class="panel-tag">WAR ROOM</span>
+        </div>
+        <div id="dossier-body" class="dossier-body"></div>
+      </aside>
+
+      <section id="minimap-panel" class="panel">
+        <div class="panel-head">
+          <span>THEATRE MAP</span>
+          <span class="panel-tag">LIVE</span>
+        </div>
+        <canvas id="minimap" aria-label="Minimap"></canvas>
+        <div class="minimap-footer"><span>WEST</span><span>THE GREAT FRONT</span><span>EAST</span></div>
+      </section>
+
+      <section id="recruit-dock" class="panel">
+        <div class="recruit-head">
+          <div>
+            <span class="panel-tag">REQUISITION</span>
+            <b id="deploy-name">DEPLOY TO METZ</b>
+          </div>
+          <div class="recruit-head-right">
+            <span id="queue-note">SELECT A SECTOR TO CHANGE DEPLOYMENT</span>
+          </div>
+        </div>
+        <div id="recruit-cards" class="recruit-cards"></div>
+      </section>
+
+      <div id="ability-dock">
+        <button id="barrage-btn" class="ability-btn" title="Artillery Barrage (Q)">
+          <span class="ability-icon">✹</span>
+          <span class="ability-copy"><b>ARTILLERY</b><small>BARRAGE · Q</small></span>
+          <span id="ability-cd" class="ability-cd">READY</span>
+        </button>
+      </div>
+
+      <div id="hint-bar">
+        <span><kbd>LMB</kbd> SELECT</span>
+        <span><kbd>RMB</kbd> ORDER</span>
+        <span><kbd>H</kbd> DIG IN</span>
+        <span><kbd>SPACE</kbd> PAUSE</span>
+        <span><kbd>1–5</kbd> SWITCH BANNER</span>
+        <span class="hint-gold">ALL FIVE EMPIRES ANSWER TO YOU</span>
+      </div>
+
+      <div id="toast-stack" class="toast-stack"></div>
+
+      <div id="mobile-bar" class="mobile-bar">
+        <div class="mobile-selected">
+          <span id="mobile-selected-label">NO UNIT SELECTED</span>
+          <span id="mobile-selected-sub">TAP A BANNER OR UNIT TO COMMAND</span>
+        </div>
+        <div class="mobile-actions">
+          <button data-action="dig" class="mini-btn">DIG</button>
+          <button data-action="stop" class="mini-btn">STOP</button>
+          <button data-action="clear" class="mini-btn">CLEAR</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="start-screen" class="screen start-screen">
+      <div class="start-rule"></div>
+      <div class="start-content">
+        <div class="start-kicker"><span></span> A GRAND STRATEGY OF THE FIRST WORLD WAR <span></span></div>
+        <h1>The Great War</h1>
+        <div class="start-subtitle">FIVE BANNERS</div>
+        <p class="start-lede">One continent. Five empires. <em>Every banner answers to you.</em></p>
+        <div id="start-factions" class="start-factions" role="listbox" aria-label="Choose a command"></div>
+        <div id="start-doctrine" class="start-doctrine"></div>
+        <div class="start-actions">
+          <button id="start-btn" class="btn btn-primary" type="button">Start Game</button>
+          <button id="manual-btn" class="btn btn-ghost" type="button">Field Manual</button>
+        </div>
+        <p class="start-note">Take command of any empire at any time. Click a flag or press <kbd>1–5</kbd> in battle to change banners.</p>
+      </div>
+      <div class="start-footer">
+        <span>WESTERN · EASTERN · ITALIAN THEATRES</span>
+        <span>“THE LAMPS ARE GOING OUT ALL OVER EUROPE”</span>
+        <span>MCMXIV — MCMXVIII</span>
+      </div>
+    </div>
+
+    <div id="manual-modal" class="screen modal-screen hidden" role="dialog" aria-modal="true" aria-labelledby="manual-title">
+      <div class="manual-card">
+        <button id="manual-close" class="modal-close" aria-label="Close field manual">×</button>
+        <div class="manual-kicker">ISSUED TO ALL GENERAL STAFFS</div>
+        <h2 id="manual-title">Field Manual</h2>
+        <div class="manual-grid">
+          <section>
+            <h3>Command</h3>
+            <p>You are the unseen hand above five empires. Every faction is playable. Click a flag or press <kbd>1</kbd>–<kbd>5</kbd> to assume command of that nation. Its army stops taking AI orders and answers to you.</p>
+            <ul>
+              <li><b>Left mouse:</b> select a unit, drag to box-select.</li>
+              <li><b>Right mouse:</b> move or attack.</li>
+              <li><b>WASD / arrows:</b> pan. Wheel: zoom.</li>
+              <li><b>H:</b> dig in. <b>S:</b> stop. <b>Q:</b> artillery.</li>
+            </ul>
+          </section>
+          <section>
+            <h3>The Front</h3>
+            <p>Capture sectors by standing inside them with infantry or cavalry. More units capture faster. A sector must be cleared of its owner's troops before it can fall.</p>
+            <p>Hold <b>11 of 15 sectors</b> for 42 seconds to force an armistice. Capture an enemy capital to knock that empire out of the war.</p>
+          </section>
+          <section>
+            <h3>War Economy</h3>
+            <p>Each sector generates requisition. Spend it on five regimental cards. A full field army cannot recruit more; take ground to raise the cap.</p>
+            <p>Entrenched troops take far less damage. Shells are slow but can break a trench. Use artillery on clusters, then send infantry to take the crater.</p>
+          </section>
+          <section>
+            <h3>Touch</h3>
+            <p>Drag with one finger to pan, pinch to zoom. Tap a unit to select it; tap ground to order it forward. Tap an enemy while troops are selected to attack. The bottom bar carries dig, stop and clear orders.</p>
+          </section>
+        </div>
+        <button id="manual-return" class="btn btn-primary" type="button">Return to the Field</button>
+      </div>
+    </div>
+
+    <div id="pause-overlay" class="screen modal-screen hidden" role="dialog" aria-modal="true" aria-labelledby="pause-title">
+      <div class="pause-card">
+        <div class="pause-kicker">THE GUNS FALL SILENT</div>
+        <h2 id="pause-title">Paused</h2>
+        <p>The front waits. Every empire remains under your command.</p>
+        <button id="resume-btn" class="btn btn-primary" type="button">Resume</button>
+        <button id="pause-manual-btn" class="btn btn-ghost" type="button">Field Manual</button>
+        <button id="restart-btn" class="btn btn-ghost danger" type="button">Abandon Campaign</button>
+      </div>
+    </div>
+
+    <div id="gameover-overlay" class="screen modal-screen hidden" role="dialog" aria-modal="true" aria-labelledby="gameover-title">
+      <div class="gameover-card">
+        <div id="gameover-flag" class="gameover-flag"></div>
+        <div class="gameover-kicker">THE WAR IS OVER</div>
+        <h2 id="gameover-title">Victory</h2>
+        <p id="gameover-text">The German Empire has forced an armistice.</p>
+        <div id="gameover-stats" class="gameover-stats"></div>
+        <button id="new-campaign-btn" class="btn btn-primary" type="button">New Campaign</button>
+      </div>
+    </div>
+  </div>
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
