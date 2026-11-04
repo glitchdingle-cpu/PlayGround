@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#06090b">
+  <meta name="description" content="DELETE ALL — a fast, neon mainframe-cleaning arcade game. Box the corruption. Save the system files. Purge everything.">
+  <title>DELETE ALL — Mainframe Cleanup</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23c9ff3d'/%3E%3Ctext x='32' y='45' font-family='Arial Black,sans-serif' font-size='42' text-anchor='middle' fill='%23071007'%3E%E2%8C%AB%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="noise" aria-hidden="true"></div>
+
+  <div class="shell is-hidden" id="shell">
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-icon" aria-hidden="true">⌫</span>
+        <div class="brand-text">
+          <strong>DELETE<span>ALL</span></strong>
+          <small>mainframe cleanup</small>
+        </div>
+      </div>
+
+      <div class="sector-block">
+        <span class="eyebrow">SECTOR</span>
+        <div class="sector-number"><b id="sectorNum">01</b><span>/06</span></div>
+        <em id="sectorName">BOOT</em>
+      </div>
+
+      <div class="score-block">
+        <span class="eyebrow">SCORE</span>
+        <strong id="scoreValue">000000</strong>
+      </div>
+
+      <div class="top-actions">
+        <button class="icon-btn" id="soundBtn" type="button" aria-label="Mute sound" title="Sound (M)">
+          <span class="sound-on" aria-hidden="true">◖))</span>
+          <span class="sound-off" aria-hidden="true">◖×</span>
+        </button>
+        <button class="icon-btn" id="pauseBtn" type="button" aria-label="Pause game" title="Pause (P)">
+          <span aria-hidden="true">Ⅱ</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="arena" id="arena">
+      <canvas id="game" aria-label="Delete All playfield"></canvas>
+
+      <div class="hud" aria-hidden="true">
+        <div class="hud-cell integrity-cell">
+          <div class="hud-label"><span>INTEGRITY</span><b id="integrityText">100%</b></div>
+          <div class="meter"><i id="integrityBar"></i></div>
+        </div>
+        <div class="hud-cell purge-cell">
+          <div class="hud-label"><span>PURGED</span><b id="purgeText">0 / 10</b></div>
+          <div class="meter"><i id="purgeBar"></i></div>
+        </div>
+        <div class="hud-cell time-cell">
+          <div class="hud-label"><span>WINDOW</span><b id="timeText">40.0</b></div>
+          <div class="meter"><i id="timeBar"></i></div>
+        </div>
+      </div>
+
+      <div class="arena-tag"><span class="live-dot"></span> ROOT://CLEANUP_DAEMON</div>
+      <div class="hint" id="hint"><span class="desktop-hint">DRAG A BOX · RELEASE TO DELETE · TAP A FILE TO ZAP</span><span class="mobile-hint">DRAG TO BOX · TAP TO ZAP</span></div>
+
+      <button class="nuke" id="nukeBtn" type="button" disabled aria-label="Delete all corruption">
+        <span class="nuke-top"><span class="nuke-spark" aria-hidden="true">⌫</span><b>DELETE ALL</b></span>
+        <span class="nuke-sub"><span id="nukeHint">CHARGE 0%</span><kbd>SPACE</kbd></span>
+        <i class="nuke-charge" id="nukeCharge"></i>
+      </button>
+
+      <div class="nuke-fx" id="nukeFx" aria-hidden="true"><span>DELETE ALL</span><small>CORRUPTION PURGED</small></div>
+      <div class="toasts" id="toasts" aria-live="polite"></div>
+      <div class="vignette" aria-hidden="true"></div>
+    </main>
+
+    <footer class="footerbar">
+      <div class="legend">
+        <span><i class="dot corrupt"></i> CORRUPT <b>DELETE</b></span>
+        <span><i class="dot safe"></i> SYSTEM <b>PRESERVE</b></span>
+      </div>
+      <div class="chain" id="chain">
+        <span>CHAIN</span>
+        <b id="comboMult">×1</b>
+        <i><u id="comboBar"></u></i>
+      </div>
+    </footer>
+  </div>
+
+  <section class="screen menu" id="menu" aria-label="Delete All main menu">
+    <div class="menu-grid">
+      <div class="hero">
+        <div class="hero-kicker"><span class="live-dot"></span> ACTIVE BREACH DETECTED <span class="kicker-code">#0xDEAD</span></div>
+        <h1 class="logo" aria-label="Delete All">
+          <span class="logo-delete">DELETE</span>
+          <span class="logo-all" data-text="ALL">ALL<span class="logo-blink">_</span></span>
+        </h1>
+        <p class="tagline">The mainframe is infected.<br><strong>You are the cleanup.</strong></p>
+        <div class="menu-actions">
+          <button class="btn btn-primary" id="startBtn" type="button"><span>INITIATE PURGE</span><b aria-hidden="true">→</b></button>
+          <button class="btn btn-ghost" id="howBtn" type="button">HOW TO PLAY</button>
+        </div>
+        <div class="menu-meta">
+          <span>BEST <b id="bestScore">000000</b></span>
+          <span class="meta-divider"></span>
+          <span>6 SECTORS · 1 LAST CHANCE</span>
+        </div>
+      </div>
+
+      <aside class="brief" aria-label="Mission brief">
+        <div class="brief-head">
+          <span><i class="live-dot"></i> MISSION BRIEF</span>
+          <span class="brief-clock" id="menuClock">00:00:00</span>
+        </div>
+        <div class="brief-body">
+          <p class="brief-lead">A hostile payload has flooded the system. Draw a selection box over the corrupted files and release to <em>delete them</em>.</p>
+          <ol class="steps">
+            <li><span class="step-num">01</span><div><b>BOX THE BAD FILES</b><p>Drag across one or many red corrupted files.</p></div></li>
+            <li><span class="step-num">02</span><div><b>RELEASE TO PURGE</b><p>Bigger selections build a bigger chain multiplier.</p></div></li>
+            <li><span class="step-num">03</span><div><b>SPARE THE CYAN FILES</b><p>System files are innocent. Deleting one hurts.</p></div></li>
+          </ol>
+          <div class="warning">
+            <span aria-hidden="true">!</span>
+            <p><b>RULE ZERO</b> Never delete a system file. Integrity failure ends the run.</p>
+          </div>
+        </div>
+        <div class="brief-foot">
+          <span>BUILD 4.2.6 // CLEANUP DAEMON</span>
+          <button class="text-btn" id="menuSoundBtn" type="button" aria-label="Mute sound" data-sound-toggle>
+            <span class="sound-on">SOUND: ON</span><span class="sound-off">SOUND: OFF</span>
+          </button>
+        </div>
+      </aside>
+    </div>
+
+    <div class="menu-ticker" aria-hidden="true">
+      <div class="ticker-track">
+        <span>DO NOT DELETE SYSTEM FILES</span><i>///</i><span>PURGE THE CORRUPTION</span><i>///</i><span>SELECT · RELEASE · VANISH</span><i>///</i><span>INTEGRITY IS EVERYTHING</span><i>///</i><span>DO NOT DELETE SYSTEM FILES</span><i>///</i><span>PURGE THE CORRUPTION</span><i>///</i><span>SELECT · RELEASE · VANISH</span><i>///</i><span>INTEGRITY IS EVERYTHING</span><i>///</i>
+      </div>
+    </div>
+  </section>
+
+  <section class="screen modal-screen is-hidden" id="howto" aria-label="How to play" role="dialog" aria-modal="true">
+    <div class="modal-card howto-card">
+      <div class="modal-topline"><span>MANUAL // READ BEFORE PURGE</span><span id="howtoClock">00:00:00</span></div>
+      <div class="modal-kicker">CLEANUP PROTOCOL</div>
+      <h2>HOW TO <span>DELETE ALL</span></h2>
+      <p class="modal-desc">Corruption spreads through the mainframe. You have one selection tool and no undo.</p>
+      <div class="howto-grid">
+        <article>
+          <div class="howto-icon">▭</div>
+          <h3>1. BOX IT</h3>
+          <p>Press and drag anywhere to draw a selection rectangle. On touch, drag with one finger. A quick tap zaps a single file under your cursor.</p>
+        </article>
+        <article>
+          <div class="howto-icon danger">⌫</div>
+          <h3>2. DELETE IT</h3>
+          <p>Release to delete every <b class="red">red corrupted file</b> inside. Multi-file selections chain for bigger scores and charge the DELETE ALL meter.</p>
+        </article>
+        <article>
+          <div class="howto-icon safe">◇</div>
+          <h3>3. PRESERVE IT</h3>
+          <p>Never box the <b class="cyan">cyan system files</b>. Each one deleted costs 7 integrity and breaks your chain. At 0 integrity, the run is over.</p>
+        </article>
+      </div>
+      <div class="howto-notes">
+        <div><span class="note-key">BOMB</span><p>Corrupted bombs detonate on their own. Delete them before the fuse burns out.</p></div>
+        <div><span class="note-key">ROOTKIT</span><p>Armored corruption takes two hits. Crack it, then finish it.</p></div>
+        <div><span class="note-key">DELETE ALL</span><p>When the meter is full, hit <kbd>SPACE</kbd> or the button to purge every corrupt file on screen.</p></div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-primary" id="howtoClose" type="button">UNDERSTOOD <b>→</b></button>
+        <button class="btn btn-ghost" id="howtoSound" type="button" data-sound-toggle>SOUND: ON</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="screen modal-screen is-hidden" id="modal" aria-live="polite" aria-label="Game update" role="dialog" aria-modal="true">
+    <div class="modal-card" id="modalCard">
+      <div class="modal-topline"><span id="modalTopline">SYSTEM MESSAGE</span><span id="modalClock">00:00:00</span></div>
+      <div class="modal-kicker" id="modalKicker">SECTOR COMPLETE</div>
+      <h2 id="modalTitle">SECTOR CLEAR</h2>
+      <p class="modal-desc" id="modalDesc">The corruption is gone. For now.</p>
+      <div class="modal-stats" id="modalStats"></div>
+      <div class="modal-actions">
+        <button class="btn btn-primary" id="modalPrimary" type="button">CONTINUE <b>→</b></button>
+        <button class="btn btn-ghost" id="modalSecondary" type="button">MAIN MENU</button>
+      </div>
+      <p class="modal-foot" id="modalFoot">TIP: SELECT CLUSTERS OF CORRUPTION FOR A BIGGER CHAIN.</p>
+    </div>
+  </section>
+
+  <div class="rotate-note" aria-hidden="true">ROTATE DEVICE FOR A WIDER PURGE</div>
+
+  <script src="game.js"></script>
+</body>
+</html>

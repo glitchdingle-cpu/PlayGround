@@ -16,3 +16,26 @@
 - 👤 [Explore the creator's projects](https://go.ondev.store/glitchdingle-cpu).
 - 🌍 [Create with OMGithub](https://go.ondev.store/).
 <!-- omgithub:readme:end -->
+
+## DELETE ALL
+
+A fast, single-screen browser arcade game about cleaning an infected mainframe.
+
+The system is full of corrupted files. Drag a selection box across the red ones and release to delete them. Cyan system files are innocent — deleting one costs integrity. Build chains, clear six sectors, and use the fully charged **DELETE ALL** purge when things get out of hand.
+
+### Play
+
+```sh
+python3 -m http.server 3002
+```
+
+Open <http://localhost:3002>.
+
+### Controls
+
+- **Mouse / touch:** drag to box corrupted files, release to delete. Tap a single file to zap it.
+- **Space / DELETE ALL button:** purge every corrupted file on screen when the meter is full.
+- **P / Esc:** pause.
+- **M:** mute.
+
+Built with plain HTML, CSS, Canvas 2D, and Web Audio — no build step or runtime dependencies.
