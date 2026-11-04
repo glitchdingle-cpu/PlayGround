@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#111510" />
+    <meta name="description" content="Iron Epochs — a 3D real-time strategy game across WW1, WW2 and modern warfare. Dynamic terrain, 117 units, nine maps." />
+    <title>IRON EPOCHS — 3D RTS</title>
+  </head>
+  <body data-era="ww1">
+    <div id="app">
+      <div id="viewport" aria-hidden="true"></div>
+      <div class="screen-grain" aria-hidden="true"></div>
+      <div class="screen-scan" aria-hidden="true"></div>
+
+      <!-- ══════════════ MAIN MENU ══════════════ -->
+      <div id="menu" class="menu">
+        <div class="menu-gradient" aria-hidden="true"></div>
+        <header class="menu-header">
+          <div class="brand">
+            <div class="brand-kicker"><span></span> A REAL-TIME STRATEGY TRILOGY <span></span></div>
+            <h1 class="brand-title"><span class="brand-iron">IRON</span><span class="brand-epochs">EPOCHS</span></h1>
+            <div class="brand-sub">THREE WARS. THREE WORLDS. ONE BATTLEFIELD.</div>
+          </div>
+          <div class="menu-header-right">
+            <div class="live-chip"><i></i> LIVE BATTLE</div>
+            <button id="sound-toggle-menu" class="ghost-btn" type="button" aria-label="Toggle sound">SOUND: ON</button>
+          </div>
+        </header>
+
+        <div class="menu-body">
+          <section class="menu-col era-col">
+            <div class="panel-label"><b>01</b> CHOOSE ERA <span class="line"></span></div>
+            <div id="era-list" class="era-list"></div>
+            <div class="menu-note" id="era-note"></div>
+          </section>
+
+          <section class="menu-col map-col">
+            <div class="panel-label"><b>02</b> BATTLEGROUND <span class="line"></span></div>
+            <div id="map-list" class="map-list"></div>
+            <div class="map-brief">
+              <span class="map-brief-kicker">FIELD REPORT</span>
+              <p id="map-brief-text"></p>
+            </div>
+          </section>
+
+          <aside class="menu-col faction-col">
+            <div class="panel-label"><b>03</b> COMMAND <span class="line"></span></div>
+            <div id="faction-list" class="faction-list"></div>
+
+            <div class="matchup-card">
+              <div class="matchup-side">
+                <span class="matchup-label">YOUR FORCE</span>
+                <strong id="matchup-player">BRITISH EMPIRE</strong>
+                <small id="matchup-player-sub">Combined Arms</small>
+              </div>
+              <div class="matchup-vs">VS</div>
+              <div class="matchup-side matchup-side-right">
+                <span class="matchup-label">OPPOSITION</span>
+                <strong id="matchup-enemy">GERMAN EMPIRE</strong>
+                <small id="matchup-enemy-sub">Storm Tactics</small>
+              </div>
+            </div>
+
+            <div class="roster-count">
+              <div><b>5</b><span>INFANTRY</span></div>
+              <div><b>3</b><span>VEHICLES</span></div>
+              <div><b>2</b><span>AIRCRAFT</span></div>
+              <div><b>3</b><span>TANKS</span></div>
+            </div>
+
+            <button id="start-btn" class="start-btn" type="button" aria-label="Start">
+              <span class="start-label">Start</span>
+              <span class="start-meta" id="start-meta">FLANDERS · 1917</span>
+              <span class="start-arrow" aria-hidden="true">→</span>
+            </button>
+            <div class="start-note">Full 3D RTS · Dynamic craters · Base building · AI opponent</div>
+          </aside>
+        </div>
+
+        <footer class="menu-footer">
+          <div class="footer-controls">
+            <span><kbd>WASD</kbd> PAN</span>
+            <span><kbd>WHEEL</kbd> ZOOM</span>
+            <span><kbd>LMB</kbd> SELECT</span>
+            <span><kbd>RMB</kbd> ORDER</span>
+            <span><kbd>B</kbd> BARRAGE</span>
+            <span><kbd>R</kbd> ROSTER</span>
+          </div>
+          <div class="footer-credit">IRON EPOCHS · PROCEDURAL BATTLEFIELDS · 117 UNIT TYPES · 9 MAPS</div>
+        </footer>
+      </div>
+
+      <!-- ══════════════ IN-GAME HUD ══════════════ -->
+      <div id="game-ui" class="game-ui hidden">
+        <div class="hud-top">
+          <div class="hud-brand">
+            <span class="hud-brand-mark" id="hud-era-numeral">I</span>
+            <span class="hud-brand-text"><b>IRON EPOCHS</b><small id="hud-era-name">THE GREAT WAR</small></span>
+          </div>
+          <div class="hud-faction">
+            <span class="hud-emblem" id="hud-emblem">UK</span>
+            <span><b id="hud-faction-name">BRITISH EMPIRE</b><small id="hud-map-name">NO MAN'S LAND · 1917</small></span>
+          </div>
+          <div class="hud-resources">
+            <div class="res-chip" title="Supply — spend on units and buildings">
+              <span class="res-icon supply-icon">◆</span>
+              <span><small>SUPPLY</small><b id="res-supply">1650</b></span>
+              <em id="res-income">+14/s</em>
+            </div>
+            <div class="res-chip" title="Population — every unit uses population">
+              <span class="res-icon pop-icon">▮</span>
+              <span><small>POPULATION</small><b id="res-pop">0 / 55</b></span>
+            </div>
+            <div class="res-chip obj-chip" title="Destroy the enemy headquarters">
+              <span class="res-icon obj-icon">◎</span>
+              <span><small>OBJECTIVE</small><b id="objective-text">DESTROY ENEMY HQ</b></span>
+              <em id="enemy-hq-pct">100%</em>
+            </div>
+          </div>
+          <div class="hud-clock"><small>OPERATION TIME</small><b id="hud-timer">00:00</b></div>
+          <button id="menu-return" class="hud-menu-btn" type="button" aria-label="Return to menu">MENU</button>
+        </div>
+
+        <div id="capture-strip" class="capture-strip"></div>
+
+        <aside id="war-table" class="war-table">
+          <div class="wt-head">
+            <div>
+              <div class="wt-kicker">FORWARD OPERATIONS</div>
+              <div class="wt-title">WAR TABLE</div>
+            </div>
+            <button id="wt-close" class="icon-btn wt-close" type="button" aria-label="Close panel">✕</button>
+          </div>
+          <div class="wt-tabs" role="tablist">
+            <button class="wt-tab active" data-tab="build" role="tab" type="button">BUILD</button>
+            <button class="wt-tab" data-tab="roster" role="tab" type="button">ROSTER</button>
+            <button class="wt-tab" data-tab="intel" role="tab" type="button">INTEL</button>
+          </div>
+          <div id="wt-content" class="wt-content"></div>
+          <div class="wt-footer" id="wt-footer">Select a structure, then click the map to place it.</div>
+        </aside>
+
+        <div id="selection-card" class="selection-card hidden">
+          <div class="sel-top">
+            <div class="sel-icon" id="sel-icon"></div>
+            <div class="sel-title">
+              <span class="sel-kicker" id="sel-kicker">INFANTRY</span>
+              <b id="sel-name">TOMMY RIFLEMAN</b>
+              <small id="sel-role">Rifleman · British Empire</small>
+            </div>
+            <button id="sel-close" class="icon-btn" type="button" aria-label="Deselect">✕</button>
+          </div>
+          <div class="sel-hp"><span id="sel-hp-fill"></span></div>
+          <div class="sel-stats" id="sel-stats"></div>
+          <div class="sel-actions" id="sel-actions"></div>
+          <div class="sel-queue hidden" id="sel-queue"></div>
+        </div>
+
+        <div id="minimap-wrap" class="minimap-wrap">
+          <div class="minimap-head"><span>SECTOR MAP</span><button id="minimap-zoom" class="mini-btn" type="button">FOCUS BASE</button></div>
+          <canvas id="minimap" width="260" height="190"></canvas>
+          <div class="minimap-legend"><span><i class="lg-player"></i>YOU</span><span><i class="lg-enemy"></i>ENEMY</span><span><i class="lg-cap"></i>OBJECTIVE</span></div>
+        </div>
+
+        <div class="command-dock">
+          <div class="cmd-group">
+            <button class="cmd-btn" id="cmd-attack" type="button" title="Attack-move (A)"><span class="cmd-glyph">⌖</span><small>ATTACK</small></button>
+            <button class="cmd-btn" id="cmd-stop" type="button" title="Stop (S)"><span class="cmd-glyph">■</span><small>STOP</small></button>
+            <button class="cmd-btn" id="cmd-hold" type="button" title="Hold position (H)"><span class="cmd-glyph">⛨</span><small>HOLD</small></button>
+          </div>
+          <div class="cmd-divider"></div>
+          <div class="cmd-group">
+            <button class="cmd-btn ability-btn" id="cmd-artillery" type="button" title="Call an artillery barrage (B)">
+              <span class="cmd-glyph">✸</span><small>BARRAGE</small><span class="cooldown-ring" id="ability-cd"></span>
+            </button>
+            <button class="cmd-btn" id="cmd-roster" type="button" title="Open roster (R)"><span class="cmd-glyph">☰</span><small>ROSTER</small></button>
+            <button class="cmd-btn" id="cmd-base" type="button" title="Focus headquarters (SPACE)"><span class="cmd-glyph">⌂</span><small>BASE</small></button>
+          </div>
+          <div class="cmd-hint" id="cmd-hint">LMB select · RMB move / attack · WASD pan · Wheel zoom</div>
+        </div>
+
+        <div id="notif-stack" class="notif-stack" aria-live="polite"></div>
+
+        <div id="placement-banner" class="placement-banner hidden">
+          <span id="placement-text">PLACE STRUCTURE</span>
+          <span class="placement-hint">LMB PLACE · RMB CANCEL</span>
+          <button id="placement-cancel" class="mini-btn" type="button">CANCEL</button>
+        </div>
+
+        <div id="lock-banner" class="lock-banner hidden"></div>
+
+        <button id="mobile-table-toggle" class="mobile-table-toggle" type="button">WAR TABLE</button>
+        <button id="mobile-ability" class="mobile-ability" type="button">✸ BARRAGE</button>
+
+        <div id="end-screen" class="end-screen hidden">
+          <div class="end-card">
+            <div class="end-kicker" id="end-kicker">OPERATION COMPLETE</div>
+            <h2 id="end-title">VICTORY</h2>
+            <p id="end-desc"></p>
+            <div class="end-stats" id="end-stats"></div>
+            <div class="end-actions">
+              <button id="end-rematch" class="start-btn small" type="button"><span class="start-label">Rematch</span><span class="start-arrow">→</span></button>
+              <button id="end-menu" class="ghost-btn" type="button">RETURN TO COMMAND</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="loading" class="loading">
+        <div class="loading-emblem">IE</div>
+        <div class="loading-title">IRON EPOCHS</div>
+        <div class="loading-bar"><span id="loading-fill"></span></div>
+        <div class="loading-text" id="loading-text">GENERATING BATTLEFIELD…</div>
+      </div>
+
+      <div id="cursor-tip" class="cursor-tip hidden"></div>
+      <div id="select-box" class="select-box hidden"></div>
+      <div id="fatal" class="fatal hidden"></div>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
