@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#080b0d" />
+  <meta name="description" content="BROKEN LINE — a browser-based tactical first-person shooter. Hold the line through six escalating assault waves." />
+  <title>BROKEN LINE // Operation Blackout</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23080b0d'/%3E%3Cpath d='M14 20h36M14 32h22M14 44h36' stroke='%23e8a33d' stroke-width='5' stroke-linecap='square'/%3E%3Ccircle cx='46' cy='32' r='6' fill='%23e8a33d'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="app">
+    <canvas id="game" aria-label="First-person shooter viewport"></canvas>
+
+    <div class="screen-fx" aria-hidden="true">
+      <div class="fx-vignette"></div>
+      <div class="fx-grain"></div>
+      <div class="fx-scan"></div>
+    </div>
+
+    <!-- ============================== HUD ============================== -->
+    <div id="hud" class="hidden" aria-live="off">
+      <div class="hud-top">
+        <div class="mission-clock">
+          <span class="micro">MISSION TIME</span>
+          <strong id="missionTimer">00:00</strong>
+        </div>
+
+        <div class="compass">
+          <div class="compass-notch"></div>
+          <div class="compass-window"><div id="compassTrack" class="compass-track"></div></div>
+          <div class="compass-deg" id="compassDeg">000</div>
+        </div>
+
+        <div class="hostile-clock">
+          <span class="micro">THREAT</span>
+          <strong id="threatLevel">REGULAR</strong>
+        </div>
+      </div>
+
+      <div class="hud-left">
+        <div class="minimap-shell">
+          <canvas id="minimap" width="220" height="220"></canvas>
+          <div class="minimap-sweep"></div>
+          <div class="minimap-label">SECTOR 7</div>
+          <div class="minimap-coords" id="minimapCoords">N 00 / E 00</div>
+        </div>
+
+        <div class="objective-panel">
+          <div class="objective-stripe"></div>
+          <div class="objective-copy">
+            <span class="micro">PRIMARY OBJECTIVE</span>
+            <strong id="objectiveTitle">HOLD THE RELAY</strong>
+            <span id="objectiveSub">Eliminate all hostile forces</span>
+          </div>
+          <div class="objective-count"><span id="hostileCount">0</span><small>HOSTILES</small></div>
+        </div>
+
+        <div class="wave-pips" id="wavePips"></div>
+      </div>
+
+      <div class="hud-right">
+        <div class="killfeed" id="killfeed"></div>
+        <div class="feed-empty" id="feedEmpty">COMMS CHANNEL OPEN</div>
+        <div class="radio-log" id="radioLog"></div>
+      </div>
+
+      <div class="hud-bottom">
+        <div class="health-block">
+          <div class="health-head">
+            <span class="health-icon">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M3 12h18" /></svg>
+            </span>
+            <span class="micro">VITALS</span>
+            <strong id="healthValue">100</strong>
+          </div>
+          <div class="health-track"><i id="healthBar"></i></div>
+          <div class="health-status" id="healthStatus">COMBAT READY</div>
+        </div>
+
+        <div class="center-hints">
+          <div class="utility-row">
+            <span class="utility-chip"><kbd>G</kbd><span>FRAG</span><b id="grenadeCount">2</b></span>
+            <span class="utility-chip"><kbd>V</kbd><span>KNIFE</span></span>
+            <span class="utility-chip" id="reloadHint"><kbd>R</kbd><span>RELOAD</span></span>
+          </div>
+          <div id="subtitle" class="subtitle"></div>
+          <div id="prompt" class="prompt hidden"></div>
+        </div>
+
+        <div class="weapon-block">
+          <div class="weapon-top">
+            <span class="micro" id="fireMode">AUTO</span>
+            <span id="weaponName">M4 CARBINE</span>
+          </div>
+          <div class="ammo-row">
+            <div class="ammo-mag"><span id="ammoMag">30</span><i id="ammoSlash">/</i><span id="ammoReserve">180</span></div>
+            <div class="ammo-bars" id="ammoBars"></div>
+          </div>
+          <div class="weapon-bottom">
+            <span id="weaponClass">ASSAULT RIFLE</span>
+            <span class="reload-state" id="reloadState"></span>
+          </div>
+        </div>
+      </div>
+
+      <div id="crosshair" class="crosshair">
+        <i class="ch-t"></i><i class="ch-b"></i><i class="ch-l"></i><i class="ch-r"></i><b class="ch-dot"></b>
+      </div>
+      <div id="hitmarker" class="hitmarker"><i></i><i></i><i></i><i></i></div>
+      <div id="killmarker" class="killmarker"><i></i><i></i></div>
+      <div id="damageDir" class="damage-dir"></div>
+      <div id="damageWash" class="damage-wash"></div>
+      <div id="lowHealth" class="low-health">CRITICAL</div>
+
+      <div id="waveBanner" class="wave-banner">
+        <span id="bannerEyebrow">WAVE 01 / 06</span>
+        <strong id="bannerTitle">CONTACT</strong>
+        <small id="bannerSub">Hostiles inbound from the north</small>
+      </div>
+
+      <div id="scoreFloat" class="score-float"></div>
+      <div id="hurtFlash" class="hurt-flash"></div>
+    </div>
+
+    <!-- ============================== MAIN MENU ============================== -->
+    <section id="menu" class="screen menu-screen">
+      <div class="menu-shade" aria-hidden="true"></div>
+      <header class="menu-header">
+        <div class="studio-mark">
+          <span class="studio-glyph"><i></i><i></i><i></i></span>
+          <span>BLACKSITE<em>// INTERACTIVE</em></span>
+        </div>
+        <div class="build-stamp">OPS BUILD 7.13<br /><span>COMBAT SIMULATION</span></div>
+      </header>
+
+      <div class="menu-grid">
+        <div class="menu-hero">
+          <div class="classification"><span class="cl-dot"></span> CLASSIFIED // EYES ONLY</div>
+          <h1 class="game-title"><span>BROKEN</span><span class="title-accent">LINE</span></h1>
+          <div class="title-rule"></div>
+          <p class="hero-copy">
+            The city is dark. The relay is the only way out.<br />
+            Hold the sector through six assault waves.
+          </p>
+          <div class="menu-actions">
+            <button id="deployBtn" class="btn btn-primary" type="button">
+              <span class="btn-kicker">OPERATION BLACKOUT</span>
+              <span class="btn-label">DEPLOY<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6"/></svg></span>
+              <i class="btn-shine"></i>
+            </button>
+            <button id="manualBtn" class="btn btn-ghost" type="button">FIELD MANUAL</button>
+          </div>
+          <div class="menu-meta">
+            <span><b id="bestWave">00</b> BEST WAVE</span>
+            <span><b id="bestKills">000</b> BEST KILLS</span>
+            <span><b>6</b> WAVES</span>
+          </div>
+        </div>
+
+        <aside class="brief-card">
+          <div class="brief-head">
+            <span class="micro">MISSION BRIEF</span>
+            <span class="brief-code">BLK-07 / 0213</span>
+          </div>
+          <h2>BLACKOUT PROTOCOL</h2>
+          <p>
+            Insert into Sector 7 and secure the emergency relay. Enemy forces are
+            massing for a final push. No reinforcements. No extraction until the
+            sector is clear.
+          </p>
+          <div class="brief-stats">
+            <div><span>LOCATION</span><strong>KARST CITY</strong></div>
+            <div><span>LOADOUT</span><strong>M4 / P226</strong></div>
+            <div><span>CONDITIONS</span><strong>NIGHT / ASH</strong></div>
+            <div><span>SUPPORT</span><strong>NONE</strong></div>
+          </div>
+
+          <div class="difficulty-block">
+            <span class="micro">THREAT LEVEL</span>
+            <div class="difficulty" role="group" aria-label="Threat level">
+              <button type="button" data-difficulty="recruit">RECRUIT</button>
+              <button type="button" data-difficulty="regular" class="active">REGULAR</button>
+              <button type="button" data-difficulty="veteran">VETERAN</button>
+            </div>
+            <p class="difficulty-desc" id="difficultyDesc">Standard hostile accuracy and armor. The intended experience.</p>
+          </div>
+
+          <div class="brief-footer">
+            <span class="signal"><i></i><i></i><i></i><i></i></span>
+            <span>ENCRYPTED UPLINK ACTIVE</span>
+            <span class="signal-code">FREQ 141.85</span>
+          </div>
+        </aside>
+      </div>
+
+      <footer class="menu-footer">
+        <div class="control-strip">
+          <span><kbd>WASD</kbd> MOVE</span>
+          <span><kbd>MOUSE</kbd> AIM</span>
+          <span><kbd>LMB</kbd> FIRE</span>
+          <span><kbd>RMB</kbd> ADS</span>
+          <span><kbd>R</kbd> RELOAD</span>
+          <span><kbd>SHIFT</kbd> SPRINT</span>
+        </div>
+        <div class="footer-note">TOUCH CONTROLS SUPPORTED <span>•</span> HEADPHONES RECOMMENDED</div>
+      </footer>
+    </section>
+
+    <!-- ============================== FIELD MANUAL ============================== -->
+    <section id="manual" class="screen sheet-screen hidden">
+      <div class="sheet">
+        <header class="sheet-head">
+          <div>
+            <span class="micro">FIELD MANUAL // REV 07</span>
+            <h2>OPERATOR BRIEFING</h2>
+          </div>
+          <button id="manualClose" class="icon-btn" type="button" aria-label="Close field manual">✕</button>
+        </header>
+        <div class="manual-grid">
+          <div class="manual-col">
+            <h3><span>01</span> SURVIVE</h3>
+            <p>Six waves. Eliminate every hostile in the sector. The relay uplink re-arms between waves and restores ammunition and frags.</p>
+            <h3><span>02</span> ADAPT</h3>
+            <p>Use cover. Sprint between positions and aim down sights for tighter spread. Enemies flank when you stay in one place too long.</p>
+            <h3><span>03</span> AIM TRUE</h3>
+            <p>Headshots deal lethal bonus damage. Trigger discipline matters — reload behind hard cover, not in the open.</p>
+          </div>
+          <div class="manual-col">
+            <h3><span>04</span> CONTROLS</h3>
+            <div class="key-grid">
+              <span><kbd>W A S D</kbd><b>MOVE</b></span>
+              <span><kbd>SHIFT</kbd><b>SPRINT</b></span>
+              <span><kbd>SPACE</kbd><b>JUMP</b></span>
+              <span><kbd>MOUSE</kbd><b>AIM</b></span>
+              <span><kbd>LMB</kbd><b>FIRE</b></span>
+              <span><kbd>RMB</kbd><b>AIM DOWN SIGHTS</b></span>
+              <span><kbd>R</kbd><b>RELOAD</b></span>
+              <span><kbd>1 / 2</kbd><b>SWITCH WEAPON</b></span>
+              <span><kbd>G</kbd><b>FRAG GRENADE</b></span>
+              <span><kbd>V</kbd><b>MELEE</b></span>
+              <span><kbd>ESC</kbd><b>PAUSE</b></span>
+              <span><kbd>M</kbd><b>MUTE</b></span>
+            </div>
+            <h3><span>05</span> TOUCH</h3>
+            <p>Left stick moves. Drag the right side to aim. On-screen buttons handle fire, aim, reload, jump, grenade, weapon swap and pause.</p>
+          </div>
+        </div>
+        <footer class="sheet-foot"><span>BLACKSITE INTERACTIVE</span><span>NO SECOND CHANCES</span></footer>
+      </div>
+    </section>
+
+    <!-- ============================== PAUSE ============================== -->
+    <section id="pause" class="screen sheet-screen hidden">
+      <div class="sheet pause-sheet">
+        <span class="micro">SIMULATION SUSPENDED</span>
+        <h2>TACTICAL PAUSE</h2>
+        <div class="pause-stats">
+          <div><span>WAVE</span><b id="pauseWave">01 / 06</b></div>
+          <div><span>ELIMINATIONS</span><b id="pauseKills">0</b></div>
+          <div><span>ACCURACY</span><b id="pauseAccuracy">0%</b></div>
+          <div><span>SCORE</span><b id="pauseScore">0</b></div>
+        </div>
+        <div class="pause-options">
+          <label class="range-row"><span>MOUSE SENSITIVITY</span><input id="sensRange" type="range" min="0.3" max="2.5" step="0.05" value="1" /><b id="sensValue">1.00</b></label>
+          <label class="toggle-row"><span>INVERT VERTICAL AIM</span><input id="invertToggle" type="checkbox" /><i></i></label>
+          <label class="toggle-row"><span>SOUND</span><input id="soundToggle" type="checkbox" checked /><i></i></label>
+        </div>
+        <div class="pause-actions">
+          <button id="resumeBtn" class="btn btn-primary" type="button"><span class="btn-label">RESUME</span></button>
+          <button id="restartBtn" class="btn btn-ghost" type="button">RESTART MISSION</button>
+          <button id="abortBtn" class="btn btn-danger" type="button">ABORT TO MENU</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================== END SCREEN ============================== -->
+    <section id="end" class="screen sheet-screen hidden">
+      <div class="sheet end-sheet">
+        <div class="end-eyebrow"><span id="endStatus">SECTOR SECURED</span><i></i></div>
+        <h2 id="endTitle">MISSION<br /><span>COMPLETE</span></h2>
+        <p id="endDesc">The relay is online. Extraction is inbound. Sector 7 is dark, but it is ours.</p>
+        <div class="end-stats">
+          <div><span>WAVES CLEARED</span><b id="endWaves">6 / 6</b></div>
+          <div><span>ELIMINATIONS</span><b id="endKills">0</b></div>
+          <div><span>ACCURACY</span><b id="endAccuracy">0%</b></div>
+          <div><span>HEADSHOTS</span><b id="endHeads">0</b></div>
+          <div><span>TIME</span><b id="endTime">00:00</b></div>
+          <div><span>SCORE</span><b id="endScore">0</b></div>
+        </div>
+        <div class="end-actions">
+          <button id="redeployBtn" class="btn btn-primary" type="button"><span class="btn-label">REDEPLOY</span></button>
+          <button id="menuBtn" class="btn btn-ghost" type="button">RETURN TO MENU</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================== MOBILE ============================== -->
+    <div id="touchControls" class="touch-controls hidden" aria-hidden="true">
+      <button id="btnPause" class="pause-touch" type="button" aria-label="Pause mission">
+        <svg viewBox="0 0 24 24"><path d="M9 5v14M15 5v14" /></svg>
+      </button>
+      <div id="stickZone" class="stick-zone">
+        <div class="stick-ring"><i></i><i></i><i></i><i></i></div>
+        <div id="stickBase" class="stick-base"><div id="stickKnob" class="stick-knob"></div></div>
+        <span>MOVE</span>
+      </div>
+      <div class="touch-buttons">
+        <button id="btnAim" class="tbtn tbtn-aim" type="button" aria-label="Aim down sights"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="6"/><path d="M12 2v4M22 12h-4M12 22v-4M2 12h4"/></svg><span>AIM</span></button>
+        <button id="btnGrenade" class="tbtn tbtn-small" type="button" aria-label="Throw grenade"><svg viewBox="0 0 24 24"><circle cx="12" cy="14" r="5"/><path d="M10 5h4v4M12 5V2M17 7l2-2"/></svg><span>FRAG</span></button>
+        <button id="btnReload" class="tbtn tbtn-small" type="button" aria-label="Reload"><svg viewBox="0 0 24 24"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M6.1 9a7 7 0 0 1 11.4-1L20 12M4 12l2.5 4a7 7 0 0 0 11.4-1"/></svg><span>RELOAD</span></button>
+        <button id="btnJump" class="tbtn tbtn-small" type="button" aria-label="Jump"><svg viewBox="0 0 24 24"><path d="M12 20V5M6 11l6-6 6 6"/></svg><span>JUMP</span></button>
+        <button id="btnSwap" class="tbtn tbtn-small" type="button" aria-label="Swap weapon"><svg viewBox="0 0 24 24"><path d="M4 8h15l-3-3M20 16H5l3 3"/></svg><span>SWAP</span></button>
+        <button id="btnFire" class="tbtn tbtn-fire" type="button" aria-label="Fire"><span class="fire-ring"></span><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v5M12 17v5M2 12h5M17 12h5"/></svg><span>FIRE</span></button>
+      </div>
+    </div>
+
+    <div id="rotateHint" class="rotate-hint hidden">
+      <div class="rotate-device"><i></i></div>
+      <strong>ROTATE DEVICE</strong>
+      <span>Landscape orientation recommended</span>
+    </div>
+
+    <!-- ============================== LOADER ============================== -->
+    <div id="loader" class="loader">
+      <div class="loader-inner">
+        <div class="loader-brand">BLACKSITE <span>//</span> COMBAT SYSTEMS</div>
+        <div class="loader-title">BROKEN LINE</div>
+        <div class="loader-bar"><i id="loaderBar"></i></div>
+        <div class="loader-row"><span id="loaderStatus">INITIALIZING TACTICAL RUNTIME</span><b id="loaderPct">00</b></div>
+        <div class="loader-tip">TIP // HEADSHOTS DEAL BONUS DAMAGE. RELOAD BEHIND COVER.</div>
+      </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+    <div id="lockHint" class="lock-hint hidden">CLICK TO ENGAGE TACTICAL CONTROL</div>
+  </div>
+
+  <script type="module" src="js/game.js"></script>
+</body>
+</html>
