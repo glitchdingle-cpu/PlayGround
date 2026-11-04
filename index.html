@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0b1a12">
+<title>Everwild — A Forest Exploration</title>
+<meta name="description" content="A first-person exploration journey through a hyper-detailed procedural forest: crystal waters, granite peaks, ancient pines and hidden landmarks. No combat — just the wild.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌲</text></svg>">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app">
+  <canvas id="game-canvas"></canvas>
+
+  <!-- In-game HUD -->
+  <div id="hud" class="hidden" aria-hidden="true">
+    <div id="topbar">
+      <div id="landmark-counter" title="Landmarks discovered">
+        <span class="gem">❖</span> <span id="lm-count">0</span><span class="lm-total"> / 6</span>
+      </div>
+      <canvas id="compass" width="560" height="48"></canvas>
+    </div>
+
+    <div id="objective">Explore the Everwild — discover all 6 landmarks</div>
+    <canvas id="minimap" width="184" height="184" title="Everwild map"></canvas>
+
+    <div id="stamina-wrap"><div id="stamina-bar"></div></div>
+    <div id="crosshair"></div>
+  </div>
+
+  <!-- Toast for discoveries -->
+  <div id="toast" class="hidden"><div id="toast-kicker">Landmark discovered</div><div id="toast-name"></div></div>
+
+  <!-- Completion banner -->
+  <div id="banner" class="hidden">
+    <div class="banner-inner">
+      <div class="banner-kicker">❖ ❖ ❖</div>
+      <h2>Master of the Everwild</h2>
+      <p>Every landmark discovered. The forest knows your name, wanderer.</p>
+      <p class="banner-time">Expedition time: <span id="banner-time">0:00</span></p>
+      <div class="banner-actions">
+        <button id="btn-keep-wandering" class="btn btn-primary">Keep wandering</button>
+        <button id="btn-restart" class="btn btn-ghost">Start anew</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Corner buttons -->
+  <div id="corner-buttons">
+    <button id="btn-time" class="icon-btn" title="Cycle time of day (C)">🌇</button>
+    <button id="btn-mute" class="icon-btn" title="Mute ambience (M)">🔊</button>
+    <button id="btn-help" class="icon-btn" title="Controls &amp; help (H)">?</button>
+  </div>
+
+  <!-- Pause overlay -->
+  <div id="pause-overlay" class="hidden">
+    <div class="pause-inner">
+      <h2>Paused</h2>
+      <p>Click to return to the forest</p>
+      <div class="controls-grid" style="margin-top:0;margin-bottom:18px">
+        <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Move</div>
+        <div><kbd>Shift</kbd> Run</div>
+        <div><kbd>Space</kbd> Jump</div>
+        <div><kbd>C</kbd> Time</div>
+        <div><kbd>M</kbd> Mute</div>
+      </div>
+      <button id="btn-resume" class="btn btn-primary">Resume</button>
+    </div>
+  </div>
+
+  <!-- Touch controls (mobile only) -->
+  <div id="touch-ui" class="hidden">
+    <div id="joy-zone">
+      <div id="joy-base"><div id="joy-knob"></div></div>
+    </div>
+    <div id="touch-buttons">
+      <button id="btn-run" class="touch-btn" aria-pressed="false">RUN</button>
+      <button id="btn-jump" class="touch-btn">JUMP</button>
+    </div>
+  </div>
+
+  <!-- Start overlay -->
+  <div id="start-overlay">
+    <div class="start-inner">
+      <div class="start-kicker">A HAND-BUILT PROCEDURAL WILDERNESS</div>
+      <h1 class="game-title">EVER<span>WILD</span></h1>
+      <p class="tagline">No guns. No goals but wonder. Wander an ancient forest of granite peaks,
+        crystal water and whispering pines — and uncover all six hidden landmarks.</p>
+
+      <div class="features">
+        <div class="feature"><span class="fi">🌊</span><span>Gerstner-wave water with shore foam &amp; sun glint</span></div>
+        <div class="feature"><span class="fi">⛰️</span><span>Procedural ridged-noise mountains, snow-capped</span></div>
+        <div class="feature"><span class="fi">🌲</span><span>Living forest — 2,000+ wind-swayed pines</span></div>
+        <div class="feature"><span class="fi">🔥</span><span>Ember Camp, the Great Falls, a singing elder…</span></div>
+        <div class="feature"><span class="fi">🌅</span><span>Full day–night cycle &amp; dynamic sky</span></div>
+      </div>
+
+      <button id="btn-begin" class="btn btn-begin">Begin Exploration</button>
+
+      <div class="controls-grid" id="controls-desktop">
+        <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Move</div>
+        <div><kbd>Mouse</kbd> Look</div>
+        <div><kbd>Shift</kbd> Run</div>
+        <div><kbd>Space</kbd> Jump</div>
+        <div><kbd>C</kbd> Time of day</div>
+        <div><kbd>M</kbd> Mute</div>
+      </div>
+      <div class="controls-grid hidden" id="controls-touch">
+        <div>Left thumb — joystick to walk</div>
+        <div>Right thumb — drag to look</div>
+        <div>RUN toggle — hold a sprint pace</div>
+      </div>
+      <p class="hint-line">Sound on for wind, birdsong and fire.</p>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
