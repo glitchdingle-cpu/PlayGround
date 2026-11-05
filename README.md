@@ -17,13 +17,13 @@
 - 🌍 [Create with OMGithub](https://go.ondev.store/).
 <!-- omgithub:readme:end -->
 
-## Iron Front 1944 — World War II Real-Time Strategy
+## Iron Front 1944 — World War II Grand Strategy RTS
 
-A complete 3D RTS set during the Ardennes counterstroke, December 1944. Command US forces: build barracks and war factories, train rifle squads, recon jeeps, Sherman tanks and 105mm howitzers, capture the three high-ground flags that fund your war effort, and destroy the Axis headquarters before your own falls.
+A complete alternate-1944 grand-strategy RTS. **Five powers** — USA, USSR, Germany, Imperial Japan and Free France — contest one burning continent. Pick a side in **Skirmish** (rival powers fight with full AI, allies coordinate with you) or take **Supreme Command** in **Sandbox** (all five powers answer to you; nothing can defeat you).
 
+- **Alliance matrix** — presets (Allies vs Axis, Axis Survival, Germany & USA, USSR & Japan, Free For All) or assign every nation to Team A / Team B / FFA yourself.
+- **50 buildable structures** — sandbag lines and pyramids, log/crate/concrete/steel/stone walls, dragon's teeth, Czech hedgehogs, barbed wire, minefields, explosive barrels, trench lines, dugouts, MG nests, sniper hides, AT gun pits, three bunker classes, a field cannon, plus support structures (field hospital, workshop, watchtower, observation post, radio mast, fire direction center, ammo & fuel depots, field kitchen) and a full camp-building set. Armed emplacements fire back; support buildings radiate auras (damage, reload, sight, speed, healing).
 - **Play**: served statically from the repo root — open `index.html` via the project dev server (`./start.sh`, default port 3000).
-- **Tech**: Three.js (vendored, no build step), procedural terrain/textures, synthesized Web Audio SFX, no external assets.
-- **Features**: box/click selection, attack-move/stop/hold, build placement with ghost preview and validity rings, production queues with rally points, capture-point economy, camera pan/zoom/rotate, edge pan, minimap with camera frustum, pause menu, victory/defeat AAR, difficulty (Cadet / Officer / Marshal), full touch support (tap select/command, pinch zoom, two-finger pan).
+- **Tech**: Three.js (vendored, no build step), procedural terrain, baked bocage fields & roads, hedgerow forests, synthesized Web Audio SFX — zero external assets.
+- **Features**: box/click selection, attack-move/stop/hold, build placement with ghost + validity ring, production queues with rally points, 5 capture flags funding your war economy, camera pan/zoom/rotate, edge pan, live minimap with camera frustum, pause menu, victory/defeat AAR, Cadet / Officer / Marshal difficulty, full touch support.
 - **Controls**: Arrow keys / screen edge — pan · Wheel — zoom · Q/E — rotate · A attack-move · S stop · H hold · B/F build · Q/W train · Esc pause.
-
-Axis AI builds, expands, captures flags, and launches armored counterattacks — on Marshal difficulty it does not go gently.

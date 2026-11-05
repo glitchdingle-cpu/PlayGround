@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#0c0e0a">
-<title>Iron Front 1944 — WW2 Real-Time Strategy</title>
-<meta name="description" content="Command US forces in the Ardennes, December 1944. Build your war machine, capture the high ground and crush the Axis counterstroke in this 3D World War II real-time strategy game.">
+<title>Iron Front 1944 — WW2 Grand Strategy RTS</title>
+<meta name="description" content="Command one of five powers — USA, USSR, Germany, Japan or Free France — in an alternate 1944 Europa. Build armies, forge alliances, fortify with 50 structures, and crush every hostile headquarters in this 3D real-time strategy sandbox.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23d6b25e' d='M12 2l3 6.7 7.3.6-5.6 4.7 1.7 7-6.4-3.9L5.6 21l1.7-7L1.7 9.3l7.3-.6z'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="css/style.css">
 <script type="importmap">
@@ -21,20 +21,20 @@
   <div id="hud" class="hidden">
     <header id="topbar" class="panel">
       <div class="tb-left">
-        <span id="faction-badge" aria-hidden="true">
-          <svg viewBox="0 0 24 24"><path fill="#d6b25e" d="M12 2l3 6.7 7.3.6-5.6 4.7 1.7 7-6.4-3.9L5.6 21l1.7-7L1.7 9.3l7.3-.6z"/></svg>
-        </span>
+        <span id="faction-badge" aria-hidden="true"><canvas id="faction-flag" width="46" height="31"></canvas></span>
         <div class="tb-titles">
           <div id="game-name">IRON FRONT</div>
-          <div id="game-map">Ardennes Sector · December 1944</div>
+          <div id="game-map">Europa · December 1944</div>
         </div>
       </div>
 
       <div class="tb-center">
         <div id="flag-pips" aria-label="Capture points">
-          <div class="pip-wrap"><div id="pip-A" class="pip pip-neutral">A</div><span>Hill 400</span></div>
-          <div class="pip-wrap"><div id="pip-B" class="pip pip-neutral">B</div><span>Crossroads S</span></div>
-          <div class="pip-wrap"><div id="pip-C" class="pip pip-neutral">C</div><span>Ridge North</span></div>
+          <div class="pip-wrap"><div id="pip-A" class="pip pip-neutral">A</div><span>Crossroads</span></div>
+          <div class="pip-wrap"><div id="pip-B" class="pip pip-neutral">B</div><span>Hill 400</span></div>
+          <div class="pip-wrap"><div id="pip-C" class="pip pip-neutral">C</div><span>Ridge East</span></div>
+          <div class="pip-wrap"><div id="pip-D" class="pip pip-neutral">D</div><span>Ford South</span></div>
+          <div class="pip-wrap"><div id="pip-E" class="pip pip-neutral">E</div><span>Monastery Hill</span></div>
         </div>
         <div class="tb-timer-wrap">
           <div id="game-timer">15:00</div>
@@ -43,7 +43,7 @@
       </div>
 
       <div class="tb-right">
-        <div class="req-panel" title="Requisition — spent to build units and structures">
+        <div class="req-panel" title="Requisition — spent to build units, structures and fortifications">
           <div id="req-count">0</div>
           <div class="req-side"><span class="req-label">REQ</span><span id="req-income">+0/s</span></div>
         </div>
@@ -71,40 +71,54 @@
     <div id="command-card" class="panel">
       <div id="cc-title">FIELD COMMAND</div>
       <div id="cc-buttons"></div>
+      <div id="build-tabs" class="hidden"></div>
+      <div id="fort-grid" class="hidden"></div>
     </div>
 
     <div id="minimap-wrap" class="panel">
-      <div id="minimap-label">ARDENNES SECTOR</div>
+      <div id="minimap-label">EUROPA 1944</div>
       <canvas id="minimap" width="240" height="240" aria-label="Tactical minimap — click to move camera"></canvas>
     </div>
 
-    <div id="placement-hint" class="hidden">Placing building — click to build, right-click / Esc to cancel</div>
+    <div id="placement-hint" class="hidden">Placing structure — tap the map to build · tap here / right-click / Esc to cancel</div>
     <div id="toast" role="status"></div>
   </div>
 
   <div id="selection-box" class="hidden"></div>
 
-  <!-- ============ MAIN MENU ============ -->
+  <!-- ============ MAIN MENU / WAR ROOM ============ -->
   <div id="menu" class="overlay">
-    <div class="menu-inner">
-      <div class="menu-kicker">Ardennes Forest · 16 December 1944 · 05:30</div>
+    <div class="menu-left">
+      <div class="menu-kicker">Europa · 16 December 1944 · The Grand Offensive</div>
       <h1 class="menu-title">IRON<br>FRONT</h1>
-      <div class="menu-sub"><span>1944</span> — A World War II Real-Time Strategy</div>
-      <p class="menu-brief">The German counterstroke has smashed into the Ardennes. Command the battered US 1st Armored Division: rebuild your line, seize the high ground, keep the roads open — and break the enemy's spearhead before it rolls over your headquarters.</p>
+      <div class="menu-sub"><span>1944</span> — Grand Strategy of the Second World War</div>
+      <p class="menu-brief">Five powers march on the same burning continent. Command your chosen nation — or all five in the sandbox — forge alliances (or betray them), fortify the roads with fifty kinds of field works, and grind the enemy's spearheads into the mud.</p>
 
-      <div class="diff-label">CHOOSE YOUR COMMAND</div>
-      <div class="diff-row" role="radiogroup" aria-label="Difficulty">
+      <div class="menu-label">CAMPAIGN MODE</div>
+      <div class="mode-row" role="radiogroup" aria-label="Game mode">
+        <button id="mode-skirmish" class="mode-btn selected" role="radio" aria-checked="true">
+          <span class="mode-name">SKIRMISH</span>
+          <span class="mode-desc">You command one nation. Rival powers fight with full AI — allies at your side, enemies at your throat.</span>
+        </button>
+        <button id="mode-sandbox" class="mode-btn" role="radio" aria-checked="false">
+          <span class="mode-name">SANDBOX</span>
+          <span class="mode-desc">Supreme command. Every power is yours. Build anything, fortify everything, no defeat possible.</span>
+        </button>
+      </div>
+
+      <div class="menu-label" id="diff-label">COMMAND DIFFICULTY</div>
+      <div class="diff-row" id="diff-row" role="radiogroup" aria-label="Difficulty">
         <button class="diff-btn" data-diff="cadet" role="radio" aria-checked="false">
           <span class="diff-name">CADET</span>
-          <span class="diff-desc">Relaxed tempo. A hesitant enemy economy. Learn the ropes.</span>
+          <span class="diff-desc">Relaxed tempo. Hesitant enemy economy.</span>
         </button>
         <button class="diff-btn selected" data-diff="officer" role="radio" aria-checked="true">
           <span class="diff-name">OFFICER</span>
-          <span class="diff-desc">A fair fight. Balanced enemy doctrine and reinforcements.</span>
+          <span class="diff-desc">A fair fight. Balanced doctrine.</span>
         </button>
         <button class="diff-btn" data-diff="marshal" role="radio" aria-checked="false">
           <span class="diff-name">MARSHAL</span>
-          <span class="diff-desc">Relentless Panzer veteran. Superior production. No mercy.</span>
+          <span class="diff-desc">Relentless elites. No mercy.</span>
         </button>
       </div>
 
@@ -120,7 +134,7 @@
             <li><kbd>Right-click</kbd> move / attack / capture point</li>
             <li><kbd>A</kbd> attack-move · <kbd>S</kbd> stop · <kbd>H</kbd> hold position (toggle)</li>
             <li><kbd>Right-click</kbd> with a factory selected sets its rally point</li>
-            <li>Touch: tap selects &amp; commands · drag pans · pinch zooms</li>
+            <li>Touch: tap selects &amp; commands · pinch zooms · two-finger pan</li>
           </ul>
           <h3>Camera</h3>
           <ul>
@@ -129,30 +143,57 @@
           </ul>
         </div>
         <div class="howto-col">
-          <h3>Production</h3>
+          <h3>Production &amp; Building</h3>
           <ul>
-            <li>Select your <strong>HQ</strong> → <kbd>B</kbd> Barracks · <kbd>F</kbd> War Factory</li>
-            <li>Click the map to place — green ring means valid ground</li>
-            <li>Select a producer → <kbd>Q</kbd> / <kbd>W</kbd> trains its units</li>
-            <li>Capture flags <strong>A</strong>, <strong>B</strong>, <strong>C</strong> for +4 REQ/s each</li>
+            <li>Select your <strong>HQ</strong> → tabs open <strong>50 structures</strong> (Fortify · Guns · Support · Camp)</li>
+            <li><kbd>B</kbd> Barracks · <kbd>F</kbd> War Factory — click map to place (green ring = valid)</li>
+            <li>Select a producer → <kbd>Q</kbd> / <kbd>W</kbd> trains units</li>
+            <li>Fortresses: sandbag lines, bunkers, MG nests, anti-tank pits, minefields</li>
+            <li>Fire Direction Centers &amp; Watchtowers supercharge your guns</li>
+            <li>Capture flags <strong>A–E</strong> for +3 REQ/s each</li>
           </ul>
           <h3>Objective</h3>
           <ul>
-            <li><strong>Destroy the Axis Headquarters</strong> to win</li>
-            <li>Lose your HQ and the front collapses</li>
-            <li>If the assault stalls (15:00), the stronger surviving HQ claims the field</li>
+            <li><strong>Destroy every hostile headquarters</strong> to win</li>
+            <li>Lose your HQ — and your allies cannot save you</li>
+            <li>At the 15-minute whistle, the stronger HQ claims the field</li>
+            <li>Sandbox: no clock, no defeat — pure creation</li>
           </ul>
         </div>
       </div>
 
       <div class="menu-footer">
         <button id="menu-mute" class="mute-label text-btn small">Sound: On</button>
-        <span class="menu-credit">Three.js · All terrain, models &amp; audio synthesized in-browser · No external assets</span>
+        <span class="menu-credit">Three.js · Procedural terrain, models &amp; audio · No external assets</span>
+      </div>
+    </div>
+
+    <div id="war-room" class="panel">
+      <div class="wr-head">
+        <div class="wr-title">WAR ROOM</div>
+        <div class="wr-sub">Five powers · One continent · Your call</div>
+      </div>
+
+      <div class="wr-section" id="wr-faction-section">
+        <div class="wr-label">CHOOSE YOUR POWER</div>
+        <div id="faction-cards"></div>
+      </div>
+      <div id="wr-sandbox-note" class="hidden">
+        <div class="wr-label">SUPREME COMMAND</div>
+        <p class="wr-sandbox-text">All five powers answer to you. Build armies for every nation, fortify every road, blanket the field in minefields — and watch history's greatest war machine march without opposition.</p>
+      </div>
+
+      <div class="wr-section">
+        <div class="wr-label">ALLIANCE MATRIX</div>
+        <div id="alliance-presets"></div>
+        <button id="alliance-custom" class="wr-custom-btn" aria-pressed="false">CUSTOM — assign teams yourself</button>
+        <div id="custom-alliances" class="hidden"></div>
+        <div class="wr-alliance-note">A-team fights B-team. FFA powers fight everyone — even each other.</div>
       </div>
     </div>
     <div class="menu-side-note" aria-hidden="true">
       <div class="side-note-line"></div>
-      <div class="side-note-text">05:28 — Artillery prep lifts. Roads jammed with refugees. Somewhere east, the first Panzer engines wake.</div>
+      <div class="side-note-text">05:28 — Artillery prep lifts on five fronts. Somewhere east, a Panzer's engine coughs awake.</div>
     </div>
   </div>
 
@@ -178,7 +219,7 @@
     <div class="end-inner panel">
       <div class="end-kicker">AFTER ACTION REPORT</div>
       <h2 id="end-title" class="end-title victory">VICTORY</h2>
-      <div id="end-sub" class="end-sub">Axis headquarters destroyed.</div>
+      <div id="end-sub" class="end-sub">Enemy headquarters destroyed.</div>
       <div id="end-stats"></div>
       <div class="end-buttons">
         <button id="again-btn" class="big-btn primary">PLAY AGAIN</button>
