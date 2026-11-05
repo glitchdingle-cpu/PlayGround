@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0c0e0a">
+<title>Iron Front 1944 — WW2 Real-Time Strategy</title>
+<meta name="description" content="Command US forces in the Ardennes, December 1944. Build your war machine, capture the high ground and crush the Axis counterstroke in this 3D World War II real-time strategy game.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23d6b25e' d='M12 2l3 6.7 7.3.6-5.6 4.7 1.7 7-6.4-3.9L5.6 21l1.7-7L1.7 9.3l7.3-.6z'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/style.css">
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.min.js" } }
+</script>
+</head>
+<body>
+<div id="app">
+  <div id="scene-container"></div>
+  <div id="vignette"></div>
+
+  <!-- ============ IN-GAME HUD ============ -->
+  <div id="hud" class="hidden">
+    <header id="topbar" class="panel">
+      <div class="tb-left">
+        <span id="faction-badge" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path fill="#d6b25e" d="M12 2l3 6.7 7.3.6-5.6 4.7 1.7 7-6.4-3.9L5.6 21l1.7-7L1.7 9.3l7.3-.6z"/></svg>
+        </span>
+        <div class="tb-titles">
+          <div id="game-name">IRON FRONT</div>
+          <div id="game-map">Ardennes Sector · December 1944</div>
+        </div>
+      </div>
+
+      <div class="tb-center">
+        <div id="flag-pips" aria-label="Capture points">
+          <div class="pip-wrap"><div id="pip-A" class="pip pip-neutral">A</div><span>Hill 400</span></div>
+          <div class="pip-wrap"><div id="pip-B" class="pip pip-neutral">B</div><span>Crossroads S</span></div>
+          <div class="pip-wrap"><div id="pip-C" class="pip pip-neutral">C</div><span>Ridge North</span></div>
+        </div>
+        <div class="tb-timer-wrap">
+          <div id="game-timer">15:00</div>
+          <div class="tb-timer-label">TIME REMAINING</div>
+        </div>
+      </div>
+
+      <div class="tb-right">
+        <div class="req-panel" title="Requisition — spent to build units and structures">
+          <div id="req-count">0</div>
+          <div class="req-side"><span class="req-label">REQ</span><span id="req-income">+0/s</span></div>
+        </div>
+        <button id="speed-toggle" class="tb-btn" title="Toggle game speed" aria-label="Toggle game speed">×1</button>
+        <button id="mute-btn" class="tb-btn" title="Toggle sound" aria-label="Toggle sound">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4z" fill="currentColor" stroke="none"/><path class="sound-waves" d="M15.5 9.5a3.5 3.5 0 0 1 0 5M18 7a7 7 0 0 1 0 10"/></svg>
+        </button>
+        <button id="pause-btn" class="tb-btn" title="Pause (Esc)" aria-label="Pause game">
+          <svg viewBox="0 0 24 24" fill="currentColor"><rect x="7" y="5" width="3.6" height="14" rx="0.8"/><rect x="13.4" y="5" width="3.6" height="14" rx="0.8"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <div id="feed" aria-live="polite"></div>
+
+    <aside id="selection-panel" class="panel">
+      <div id="sel-portrait" class="empty"></div>
+      <div class="sel-body">
+        <div id="sel-name">No selection</div>
+        <div class="sel-hp"><div id="sel-hp-fill"></div></div>
+        <div id="sel-sub">Drag a box or click a unit</div>
+      </div>
+    </aside>
+
+    <div id="command-card" class="panel">
+      <div id="cc-title">FIELD COMMAND</div>
+      <div id="cc-buttons"></div>
+    </div>
+
+    <div id="minimap-wrap" class="panel">
+      <div id="minimap-label">ARDENNES SECTOR</div>
+      <canvas id="minimap" width="240" height="240" aria-label="Tactical minimap — click to move camera"></canvas>
+    </div>
+
+    <div id="placement-hint" class="hidden">Placing building — click to build, right-click / Esc to cancel</div>
+    <div id="toast" role="status"></div>
+  </div>
+
+  <div id="selection-box" class="hidden"></div>
+
+  <!-- ============ MAIN MENU ============ -->
+  <div id="menu" class="overlay">
+    <div class="menu-inner">
+      <div class="menu-kicker">Ardennes Forest · 16 December 1944 · 05:30</div>
+      <h1 class="menu-title">IRON<br>FRONT</h1>
+      <div class="menu-sub"><span>1944</span> — A World War II Real-Time Strategy</div>
+      <p class="menu-brief">The German counterstroke has smashed into the Ardennes. Command the battered US 1st Armored Division: rebuild your line, seize the high ground, keep the roads open — and break the enemy's spearhead before it rolls over your headquarters.</p>
+
+      <div class="diff-label">CHOOSE YOUR COMMAND</div>
+      <div class="diff-row" role="radiogroup" aria-label="Difficulty">
+        <button class="diff-btn" data-diff="cadet" role="radio" aria-checked="false">
+          <span class="diff-name">CADET</span>
+          <span class="diff-desc">Relaxed tempo. A hesitant enemy economy. Learn the ropes.</span>
+        </button>
+        <button class="diff-btn selected" data-diff="officer" role="radio" aria-checked="true">
+          <span class="diff-name">OFFICER</span>
+          <span class="diff-desc">A fair fight. Balanced enemy doctrine and reinforcements.</span>
+        </button>
+        <button class="diff-btn" data-diff="marshal" role="radio" aria-checked="false">
+          <span class="diff-name">MARSHAL</span>
+          <span class="diff-desc">Relentless Panzer veteran. Superior production. No mercy.</span>
+        </button>
+      </div>
+
+      <button id="start-btn">BEGIN OPERATION</button>
+      <button id="howto-btn" class="text-btn">FIELD MANUAL — CONTROLS &amp; OBJECTIVE</button>
+
+      <div id="howto-panel">
+        <div class="howto-col">
+          <h3>Orders &amp; Selection</h3>
+          <ul>
+            <li><kbd>Left-click</kbd> select · <kbd>Drag</kbd> box-select</li>
+            <li><kbd>Shift</kbd> add to selection · <kbd>Double-click</kbd> all of type on screen</li>
+            <li><kbd>Right-click</kbd> move / attack / capture point</li>
+            <li><kbd>A</kbd> attack-move · <kbd>S</kbd> stop · <kbd>H</kbd> hold position (toggle)</li>
+            <li><kbd>Right-click</kbd> with a factory selected sets its rally point</li>
+            <li>Touch: tap selects &amp; commands · drag pans · pinch zooms</li>
+          </ul>
+          <h3>Camera</h3>
+          <ul>
+            <li><kbd>Arrow keys</kbd> / screen edge — pan</li>
+            <li><kbd>Wheel</kbd> zoom · <kbd>Q</kbd> / <kbd>E</kbd> rotate</li>
+          </ul>
+        </div>
+        <div class="howto-col">
+          <h3>Production</h3>
+          <ul>
+            <li>Select your <strong>HQ</strong> → <kbd>B</kbd> Barracks · <kbd>F</kbd> War Factory</li>
+            <li>Click the map to place — green ring means valid ground</li>
+            <li>Select a producer → <kbd>Q</kbd> / <kbd>W</kbd> trains its units</li>
+            <li>Capture flags <strong>A</strong>, <strong>B</strong>, <strong>C</strong> for +4 REQ/s each</li>
+          </ul>
+          <h3>Objective</h3>
+          <ul>
+            <li><strong>Destroy the Axis Headquarters</strong> to win</li>
+            <li>Lose your HQ and the front collapses</li>
+            <li>If the assault stalls (15:00), the stronger surviving HQ claims the field</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="menu-footer">
+        <button id="menu-mute" class="mute-label text-btn small">Sound: On</button>
+        <span class="menu-credit">Three.js · All terrain, models &amp; audio synthesized in-browser · No external assets</span>
+      </div>
+    </div>
+    <div class="menu-side-note" aria-hidden="true">
+      <div class="side-note-line"></div>
+      <div class="side-note-text">05:28 — Artillery prep lifts. Roads jammed with refugees. Somewhere east, the first Panzer engines wake.</div>
+    </div>
+  </div>
+
+  <!-- ============ PAUSE ============ -->
+  <div id="pause" class="overlay overlay-dim hidden">
+    <div class="pause-inner panel">
+      <div class="pause-kicker">OPERATION IRON FRONT</div>
+      <h2 class="pause-title">HELD AT THE FRONT</h2>
+      <div class="pause-sub">The offensive waits on your word, Commander.</div>
+      <div class="pause-buttons">
+        <button id="resume-btn" class="big-btn primary">RESUME COMMAND</button>
+        <button id="restart-btn" class="big-btn">RESTART OPERATION</button>
+        <button id="quit-btn" class="big-btn danger">ABANDON TO MENU</button>
+      </div>
+      <div class="pause-controls">
+        <span><kbd>Esc</kbd> resume</span><span><kbd>A</kbd> attack-move</span><span><kbd>S</kbd> stop</span><span><kbd>H</kbd> hold</span><span><kbd>B</kbd>/<kbd>F</kbd> build</span><span><kbd>Q</kbd>/<kbd>W</kbd> train</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ END SCREEN ============ -->
+  <div id="endscreen" class="overlay overlay-dim hidden">
+    <div class="end-inner panel">
+      <div class="end-kicker">AFTER ACTION REPORT</div>
+      <h2 id="end-title" class="end-title victory">VICTORY</h2>
+      <div id="end-sub" class="end-sub">Axis headquarters destroyed.</div>
+      <div id="end-stats"></div>
+      <div class="end-buttons">
+        <button id="again-btn" class="big-btn primary">PLAY AGAIN</button>
+        <button id="endmenu-btn" class="big-btn">RETURN TO HEADQUARTERS</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
