@@ -1,7 +1,7 @@
 // IRON FRONT 1944 — boot, camera rig, input, selection, orders, main loop.
 import * as THREE from 'three';
-import { G, resetState } from './state.js';
-import { MAP_SIZE, PLAYER_BASE, AXIS_BASE, ECONOMY, SKIRMISH_TIME, UNIT_DEFS, BUILDING_DEFS, FACTIONS } from './config.js';
+import { G, resetState, isPlayerControlled, areEnemies } from './state.js';
+import { MAP_SIZE, BASES, ECONOMY, SKIRMISH_TIME, FACTIONS, FACTION_IDS } from './config.js';
 import { buildWorld, terrainHeight } from './world.js';
 import { spawnUnit, spawnBuilding, findEntityById } from './commands.js';
 import { updateUnits, updateBuildings, updateFlags, updateEconomy, updateTimers, updateHealthBars } from './simulation.js';
@@ -10,7 +10,7 @@ import { initAI, updateAI } from './ai.js';
 import {
   initUI, refreshCommandCard, tickCommandCard, tickMinimap, tickHUD,
   endGame, showOverlay, hideOverlay, exitPlacementMode, clickPlacement,
-  screenToGround, enterPlacementMode, trainUnit
+  screenToGround, enterPlacementMode, trainUnit, paintFactionBadge
 } from './ui.js';
 import { spawnMoveMarker } from './effects.js';
 import { feedEvent, showToast, hideToast } from './feed.js';
@@ -81,30 +81,46 @@ function setupBattlefield() {
   G.flags = built.flags;
   G.world = built;
 
-  // HQs — one per side, instantly constructed
-  const pHQ = spawnBuilding('player', 'hq', PLAYER_BASE.x, PLAYER_BASE.z, true);
-  const aHQ = spawnBuilding('axis', 'hq', AXIS_BASE.x, AXIS_BASE.z, true);
+  const sandbox = G.sandbox;
+  // All five powers take the field — the player commands one (or all in the sandbox)
+  const hqs = {};
+  for (const f of FACTION_IDS) {
+    hqs[f] = spawnBuilding(f, 'hq', BASES[f].x, BASES[f].z, true);
+  }
 
-  G.player = { req: ECONOMY.startReq, income: ECONOMY.baseIncome };
-  G.axis = { req: ECONOMY.startReq * 0.9, income: ECONOMY.baseIncome };
+  G.player = { req: sandbox ? ECONOMY.sandboxStartReq : ECONOMY.startReq, income: sandbox ? ECONOMY.sandboxIncome : ECONOMY.baseIncome };
+  G.aiState = {};
 
-  // Opening forces
-  spawnUnit('player', 'rifle', PLAYER_BASE.x + 8, PLAYER_BASE.z - 5);
-  spawnUnit('player', 'rifle', PLAYER_BASE.x + 11, PLAYER_BASE.z + 2);
-  spawnUnit('player', 'recon', PLAYER_BASE.x + 4, PLAYER_BASE.z - 12);
-  spawnUnit('axis', 'rifle', AXIS_BASE.x - 8, AXIS_BASE.z + 5);
-  spawnUnit('axis', 'rifle', AXIS_BASE.x - 11, AXIS_BASE.z - 2);
-  spawnUnit('axis', 'recon', AXIS_BASE.x - 4, AXIS_BASE.z + 12);
+  // Opening forces for every power
+  for (const f of FACTION_IDS) {
+    const b = BASES[f];
+    const inward = Math.atan2(-b.x, -b.z);
+    spawnUnit(f, 'rifle', b.x + Math.sin(inward + 0.5) * 8, b.z + Math.cos(inward + 0.5) * 8);
+    spawnUnit(f, 'rifle', b.x + Math.sin(inward - 0.5) * 8, b.z + Math.cos(inward - 0.5) * 8);
+    spawnUnit(f, 'recon', b.x + Math.sin(inward) * 5, b.z + Math.cos(inward) * 5);
+  }
 
-  initAI();
+  // AI commanders for every non-player power (sandbox: nobody opposes you)
+  if (!sandbox) {
+    for (const f of FACTION_IDS) if (f !== G.playerFaction) initAI(f);
+  }
+
   clearSelectionRings();
-  G.cam.target.set(PLAYER_BASE.x, terrainHeight(PLAYER_BASE.x, PLAYER_BASE.z), PLAYER_BASE.z);
-  G.cam.azimuth = -Math.PI / 4;
-  G.cam.dist = 64;
+  // Camera: skirmish looks from behind your HQ toward the centre; sandbox surveys all
+  if (sandbox) {
+    G.cam.target.set(0, terrainHeight(0, 0), 0);
+    G.cam.azimuth = -0.7;
+    G.cam.dist = 108;
+  } else {
+    const b = BASES[G.playerFaction];
+    G.cam.target.set(b.x, terrainHeight(b.x, b.z), b.z);
+    G.cam.azimuth = Math.atan2(b.x, b.z);
+    G.cam.dist = 66;
+  }
   G.time = 0;
   G.timeLeft = SKIRMISH_TIME;
   G.selectionDirty = true;
-  return { pHQ, aHQ };
+  return hqs;
 }
 
 function startOperation() {
@@ -112,9 +128,18 @@ function startOperation() {
   G.mode = 'playing';
   hideOverlay('menu'); hideOverlay('pause'); hideOverlay('endscreen');
   document.getElementById('hud').classList.remove('hidden');
+  paintFactionBadge();
+  document.getElementById('game-map').textContent = G.sandbox
+    ? 'Supreme Command — Europa 1944'
+    : `${FACTIONS[G.playerFaction].name} — Europa 1944`;
   refreshCommandCard();
-  feedEvent('Operation Iron Front — destroy the Axis Headquarters', 'neutral');
-  feedEvent('Capture flags A, B, C for +4 REQ/s each', 'neutral');
+  if (G.sandbox) {
+    feedEvent('Sandbox — all five powers answer to you', G.playerFaction);
+    feedEvent('Build anything, fortify everything. There is no defeat.', 'neutral');
+  } else {
+    feedEvent('Operation Iron Front — destroy every hostile headquarters', 'neutral');
+    feedEvent('Alliances hold: your partners fight beside you', 'neutral');
+  }
   audio.ensure(); audio.resume();
 }
 function quitToMenu() {
@@ -152,7 +177,7 @@ function rebuildSelectionRings() {
     const geo = new THREE.RingGeometry(radius - 0.28, radius, 40);
     geo.rotateX(-Math.PI / 2);
     const mat = new THREE.MeshBasicMaterial({
-      color: e.side === 'player' ? 0x8be06a : 0xff6a4a,
+      color: FACTIONS[e.faction] ? FACTIONS[e.faction].ring : 0x8be06a,
       transparent: true, opacity: 0.95, depthWrite: false
     });
     const ring = new THREE.Mesh(geo, mat);
@@ -197,7 +222,7 @@ function pickEntity(clientX, clientY) {
 
 // ---------- Orders ----------
 function selectedUnits() { return G.selection.filter(e => !e.isBuilding); }
-function selectedProducers() { return G.selection.filter(e => e.isBuilding && e.type !== 'hq' && e.buildProgress >= 1); }
+function selectedProducers() { return G.selection.filter(e => e.isBuilding && e.def.trains && e.buildProgress >= 1); }
 
 function issueMoveOrder(point, attackMove) {
   const units = selectedUnits();
@@ -334,7 +359,7 @@ window.addEventListener('pointerup', (e) => {
   const hit = pickEntity(e.clientX, e.clientY);
   const isTouch = pointerState.pointerType === 'touch';
   if (hit) {
-    if (hit.side === 'player') {
+    if (isPlayerControlled(hit.faction)) {
       if (isTouch) {
         const mineOnly = G.selection.length === 1 && G.selection[0] === hit;
         setSelection(mineOnly ? [] : [hit]);
@@ -343,8 +368,8 @@ window.addEventListener('pointerup', (e) => {
       } else setSelection([hit]);
       audio.uiClick();
     } else {
-      // Enemy tapped/clicked
-      if (isTouch && selectedUnits().length) issueAttackOrder(hit);
+      // Hostile (or foreign) unit tapped/clicked
+      if (isTouch && selectedUnits().length && areEnemies(G.playerFaction, hit.faction)) issueAttackOrder(hit);
     }
   } else {
     if (pt && isTouch && selectedUnits().length) {
@@ -362,7 +387,7 @@ canvas.addEventListener('contextmenu', (e) => {
   if (G.mode !== 'playing') return;
   if (G.placingBuilding) { exitPlacementMode(); return; }
   const hit = pickEntity(e.clientX, e.clientY);
-  if (hit && hit.side === 'axis') { issueAttackOrder(hit); return; }
+  if (hit && !isPlayerControlled(hit.faction) && areEnemies(G.playerFaction, hit.faction)) { issueAttackOrder(hit); return; }
   const pt = screenToGround(e.clientX, e.clientY);
   if (!pt) return;
   if (selectedProducers().length && !selectedUnits().length) setRallyPoint(pt);
@@ -378,8 +403,8 @@ canvas.addEventListener('wheel', (e) => {
 canvas.addEventListener('dblclick', (e) => {
   if (G.mode !== 'playing') return;
   const hit = pickEntity(e.clientX, e.clientY);
-  if (hit && !hit.isBuilding && hit.side === 'player') {
-    setSelection(G.units.filter(u => u.type === hit.type && u.side === 'player' && !u.dead));
+  if (hit && !hit.isBuilding && isPlayerControlled(hit.faction)) {
+    setSelection(G.units.filter(u => u.type === hit.type && isPlayerControlled(u.faction) && !u.dead));
     audio.uiClick();
   }
 });
@@ -391,7 +416,7 @@ function boxSelect(x0, y0, x1, y1, additive) {
   const inBox = [];
   const v = new THREE.Vector3();
   for (const u of G.units) {
-    if (u.side !== 'player' || u.dead) continue;
+    if (!isPlayerControlled(u.faction) || u.dead) continue;
     v.copy(u.group.position); v.y += 1;
     v.project(camera);
     const sx = (v.x * 0.5 + 0.5) * rect.width + rect.left;
@@ -436,7 +461,7 @@ window.addEventListener('keydown', (e) => {
   if (code === 'Space') { if (G.mode === 'playing' || G.mode === 'paused') togglePause(); return; }
   if (G.mode !== 'playing') return;
   const hqSelected = G.selection.length === 1 && G.selection[0].isBuilding && G.selection[0].type === 'hq';
-  const singleProducer = G.selection.length === 1 && G.selection[0].isBuilding && G.selection[0].type !== 'hq' && G.selection[0].buildProgress >= 1
+  const singleProducer = G.selection.length === 1 && G.selection[0].isBuilding && G.selection[0].def.trains && G.selection[0].buildProgress >= 1
     ? G.selection[0] : null;
   switch (code) {
     case 'KeyA': case 'KeyM':
@@ -444,8 +469,8 @@ window.addEventListener('keydown', (e) => {
       break;
     case 'KeyS': stopSelection(); break;
     case 'KeyH': toggleHold(); break;
-    case 'KeyB': if (hqSelected) enterPlacementMode('barracks'); break;
-    case 'KeyF': if (hqSelected) enterPlacementMode('factory'); break;
+    case 'KeyB': if (hqSelected) { G.placementFaction = G.selection[0].faction; enterPlacementMode('barracks'); } break;
+    case 'KeyF': if (hqSelected) { G.placementFaction = G.selection[0].faction; enterPlacementMode('factory'); } break;
     case 'KeyQ':
       if (singleProducer && singleProducer.type === 'barracks') trainFrom(singleProducer, 'rifle');
       else if (singleProducer && singleProducer.type === 'factory') trainFrom(singleProducer, 'tank');
@@ -468,8 +493,8 @@ function trainFrom(building, type) { trainUnit(building, type); }
 function updateCamera(dt) {
   if (G.mode === 'menu') {
     const t = G.clockTime;
-    const a = t * 0.055;
-    camera.position.set(Math.sin(a) * 96, 47 + Math.sin(t * 0.24) * 5, Math.cos(a) * 96);
+    const a = t * 0.05;
+    camera.position.set(Math.sin(a) * 128, 56 + Math.sin(t * 0.24) * 6, Math.cos(a) * 128);
     camera.lookAt(0, 2, 0);
     return;
   }
@@ -522,16 +547,18 @@ function updateCamera(dt) {
 // ---------- End conditions ----------
 let endCheckT = 0;
 function checkEndConditions(dt) {
+  if (G.sandbox) return; // sandbox never ends
   endCheckT -= dt;
   if (endCheckT > 0) return;
   endCheckT = 0.5;
-  const playerHQ = G.buildings.find(b => b.side === 'player' && b.type === 'hq');
-  const axisHQ = G.buildings.find(b => b.side === 'axis' && b.type === 'hq');
-  if (!axisHQ) return endGame('player', 'Axis headquarters destroyed — the Ardennes salient collapses.');
-  if (!playerHQ) return endGame('axis', 'Your headquarters was destroyed — the line breaks.');
+  const playerHQ = G.buildings.find(b => b.faction === G.playerFaction && b.type === 'hq');
+  const hostileStanding = G.buildings.filter(b => b.type === 'hq' && areEnemies(G.playerFaction, b.faction));
+  if (!playerHQ) return endGame('axis', `Your ${FACTIONS[G.playerFaction].hqName} lies in ruins — the front collapses.`);
+  if (hostileStanding.length === 0) return endGame('player', 'Every hostile headquarters lies in ruins — the continent is ours.');
   if (G.timeLeft <= 0) {
-    const pFrac = playerHQ.hp / playerHQ.maxHp, aFrac = axisHQ.hp / axisHQ.maxHp;
-    if (pFrac >= aFrac) endGame('player', 'The assault stalls — your headquarters held the stronger line.');
+    const pFrac = playerHQ.hp / playerHQ.maxHp;
+    const hostileFrac = Math.max(...hostileStanding.map(b => b.hp / b.maxHp));
+    if (pFrac >= hostileFrac) endGame('player', 'The assault stalls — your coalition held the stronger line.');
     else endGame('axis', 'The offensive peters out — the enemy holds the stronger line.');
   }
 }
